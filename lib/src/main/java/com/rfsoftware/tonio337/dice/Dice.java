@@ -6,8 +6,9 @@ package com.rfsoftware.tonio337.dice;
 
 public class Dice {
 
+    private static int minSides = 4;
+
     private int sides;
-    private static final int minSides = 6;
 
     public Dice(){
         this(minSides);
