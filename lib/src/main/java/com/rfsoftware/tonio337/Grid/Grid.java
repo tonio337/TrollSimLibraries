@@ -4,53 +4,52 @@ package com.rfsoftware.tonio337.grid;
  * Created by adlee on 1/11/2017.
  */
 public abstract class Grid {
-    public interface GridLocation<GL extends GridLocation>{
+    public interface Location<L extends Location>{
         // single point distance
-        double distance(GL other);
+        double distance(L other);
 
         // path-finding distance
-        double distance(GL[] others);
+        double distance(L[] others);
 
         // single point distance for multi-direction
-        double[] direction(GL other);
+        double[] direction(L other);
     }
 
-    public interface GridCollision<GL extends GridLocation>{
-        boolean moveTo(Grid grid, GL target);
-
-        boolean collidesWith(GL[] others);
-
-        // TODO: make static
-        boolean collidesWith(GL[] self, GL[] others);
-    }
-
-    public interface GridAcceleration<GL extends GridLocation>{
-
-        boolean accelerate(double accelDelta);
-        boolean accelerate(double xAccelDelta, double yAccelDelta);
-    }
-
-    public interface GridDelta<GL extends GridLocation>{
-        double maxSpeed = 0;
-
-        boolean moveTo(GL target);
-        boolean moveTo(GL target, double maxSpeed);
-    }
-
-    public interface GridObject<GO extends GridObject>{
+    public interface Object<O extends Object, L extends Location> {
         double TOUCH_DISTANCE = 0;
         double SIGHT_DISTANCE = 0;
 
-        GridLocation location();
+        L location();
 
-        double bearing();
+        double getBearing();
 
-        double distance(GO other);
+        double getBearingTo(O other);
 
-        boolean isTouching(GO other);
+        double distance(O other);
 
-        boolean canSee(GO other);
+        boolean isTouching(O other);
 
-        void moveTo(GO other);
+        boolean canSee(O other);
+
+        void setLocation(O other);
+    }
+
+    public interface CollisionOI<L extends Location>{
+        boolean moveTo(Grid grid, L target);
+
+        boolean collidesWith(L[] others);
+
+        boolean collidesWith(L[] self, L[] others);
+    }
+    public interface DeltaOI<L extends Location>{
+        double maxSpeed = 0;
+
+        boolean moveTo(L target);
+        boolean moveTo(L target, double maxSpeed);
+    }
+    public interface AccelerationOI<L extends Location> extends DeltaOI<L> {
+
+        boolean accelerate(double accelDelta);
+        boolean accelerate(double xAccelDelta, double yAccelDelta);
     }
 }
