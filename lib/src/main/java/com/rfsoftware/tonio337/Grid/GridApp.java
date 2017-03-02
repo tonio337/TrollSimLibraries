@@ -7,14 +7,17 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
+import java.util.Iterator;
 
 import javax.swing.JApplet;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
@@ -29,9 +32,9 @@ public class GridApp extends JApplet
     implements ChangeListener
 {
 
-    WeatherView weatherView;
     GridView gridView;
 
+    int numObjects = 10;
     int changeCounter = 0;
     final int changeDelay = 5;
 
@@ -62,148 +65,61 @@ public class GridApp extends JApplet
 
         JPanel p = new JPanel();
         p.add("North",new JLabel("GridView"));
-        JSlider tempSlider = new JSlider(20, 100, 65);
-        tempSlider.setMinorTickSpacing(5);
-        tempSlider.setMajorTickSpacing(20);
-        tempSlider.setPaintTicks(true);
-        tempSlider.setPaintLabels(true);
-        tempSlider.addChangeListener(this);
-        p.add(tempSlider);
+        JSlider markerSlider = new JSlider(20, 100, 65);
+        markerSlider.setMinorTickSpacing(5);
+        markerSlider.setMajorTickSpacing(20);
+        markerSlider.setPaintTicks(true);
+        markerSlider.setPaintLabels(true);
+        markerSlider.addChangeListener(this);
+        p.add(markerSlider);
         add("Center", p);
 
-        //weatherView = new WeatherView();
         gridView = new GridView();
-        gridView.setupGrid(10);
-        //p.add("Center", weatherView);
-        p.add("South", gridView);
+        gridView.setupGrid(numObjects);
+
+        p.add("South", new JScrollPane().add(gridView));
 
     }
 
     public void stateChanged(ChangeEvent e) {
         JSlider slider = (JSlider)e.getSource();
-        //weatherView.setTemperature(slider.getValue());
         if (changeCounter++ > changeDelay){
             gridView.tick();
             changeCounter = 0;
         }
-        gridView.setMarkerSize(slider.getValue());
+        gridView.setMarkerSize(slider.getValue()/2);
     }
 
-    static class WeatherView extends Component {
-
-    int temperature = 65;
-
-    String[] conditions = { "Snow", "Rain", "Cloud", "Sun"};
-    Color textColor = Color.yellow;
-    String condStr = "";
-    String feels = "";
-
-    void setTemperature(int temp) {
-        temperature = temp;
-        repaint();
+    public void setGrid(Grid2D grid){
+        if (grid != null) gridView.grid = grid;
+        gridView.setupGrid(numObjects);
     }
-
-    public Dimension getPreferredSize(){
-        return new Dimension(450, 125);
-    }
-
-    void setupText(String s1, String s2) {
-        if (temperature <= 32) {
-            textColor = Color.blue;
-            feels = "Freezing";
-        } else if (temperature <= 50) {
-            textColor = Color.green;
-            feels = "Cold";
-        } else if (temperature <= 65) {
-            textColor = Color.yellow;
-            feels = "Cool";
-        } else if (temperature <= 75) {
-            textColor = Color.orange;
-            feels = "Warm";
-        } else {
-            textColor = Color.red;
-            feels = "Hot";
-        }
-        condStr = s1;
-        if (s2 != null) {
-            condStr += "/" + s2;
-        }
-    }
-
-    void setupWeatherReport() {
-        if (temperature <= 32) {
-            setupText("Snow", null);
-        } else if (temperature <= 40) {
-            setupText("Snow", "Rain");
-        } else if (temperature <= 50) {
-            setupText("Rain", null);
-        } else if (temperature <= 58) {
-            setupText("Rain", "Cloud");
-        }  else if (temperature <= 65) {
-            setupText("Cloud", null);
-        }  else if (temperature <= 75) {
-            setupText("Cloud", "Sun");
-        } else {
-            setupText("Sun", null);
-        }
-    }
-
-    public void paint(Graphics g) {
-        Graphics2D g2 = (Graphics2D) g;
-        Dimension size = getSize();
-
-        setupWeatherReport();
-
-        // Freezing, Cold, Cool, Warm, Hot,
-        // Blue, Green, Yellow, Orange, Red
-        Font font = new Font("Serif", Font.PLAIN, 36);
-        g.setFont(font);
-
-        String tempString = feels + " " + temperature+"F";
-        FontRenderContext frc = ((Graphics2D)g).getFontRenderContext();
-        Rectangle2D boundsTemp = font.getStringBounds(tempString, frc);
-        Rectangle2D boundsCond = font.getStringBounds(condStr, frc);
-        int wText = Math.max((int)boundsTemp.getWidth(), (int)boundsCond.getWidth());
-        int hText = (int)boundsTemp.getHeight() + (int)boundsCond.getHeight();
-        int rX = (size.width-wText)/2;
-        int rY = (size.height-hText)/2;
-
-        g.setColor(Color.LIGHT_GRAY);
-        g2.fillRect(rX, rY, wText, hText);
-
-        g.setColor(textColor);
-        int xTextTemp = rX-(int)boundsTemp.getX();
-        int yTextTemp = rY-(int)boundsTemp.getY();
-        g.drawString(tempString, xTextTemp, yTextTemp);
-
-        int xTextCond = rX-(int)boundsCond.getX();
-        int yTextCond = rY-(int)boundsCond.getY() + (int)boundsTemp.getHeight();
-        g.drawString(condStr, xTextCond, yTextCond);
-
-    }
-}
 
     static class GridView extends Component {
 
         Grid2D grid;
-        Grid2D.Object2D[] objects;
+        Player2DDemo[] objects;
 
         int markerSize = 5;
+        double scale = 1;
 
         public void setupGrid(int numObjects){
+
+            String[] names = {"Anna", "Berry", "Charlie", "Dave", "Edna",
+                                "Florence", "Ginger", "Holly", "Icarus", "Juniper"};
             grid = new Grid2D(0,300,0,300,30,30);
-            objects = new Grid2D.Object2D[numObjects];
+            objects = new Player2DDemo[numObjects];
             //TODO: setup random number of objects
 
             for (int o = 0; o < objects.length; o++) {
-                objects[o] = new Player2D(grid);
+                objects[o] = new Player2DDemo(names[o] + " " + o/names.length+1,grid);
                 objects[o].setMyBearingTo(objects[0]);
                 objects[o].setFieldOfVision(70);
             }
             setMarkerSize(50);
         }
 
-        void setMarkerSize(int mSize) { markerSize = mSize; repaint(); }
+        void setMarkerSize(int mSize) { markerSize = mSize; scale = (double)mSize/50; repaint(); }
 
         public Dimension getPreferredSize(){
             return (grid == null ? new Dimension(450, 125) :
@@ -212,7 +128,10 @@ public class GridApp extends JApplet
         }
 
         public void tick() {
-
+            Player2DDemo.assimilateTick(grid);
+            if (Player2DDemo.numAlive(grid) <= 1) {
+                // TODO: End the game
+            }
         }
 
         public void paint(Graphics g) {
@@ -223,10 +142,14 @@ public class GridApp extends JApplet
 
             // Freezing, Cold, Cool, Warm, Hot,
             // Blue, Green, Yellow, Orange, Red
-            Font font = new Font("Serif", Font.PLAIN, 36);
+            Font font = new Font("Serif", Font.PLAIN, 10);
             g.setFont(font);
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON);
 
             // draw grid
+
+            g2.scale(scale,scale);
 
             for (double y = grid.getyMin(); y <= grid.getyMax(); y += grid.getyStep())
                 for (double x = grid.getxMin(); x <= grid.getxMax(); x += grid.getxStep()) {
@@ -236,24 +159,28 @@ public class GridApp extends JApplet
 
             // draw objects
 
-            for (Grid2D.Object2D obj : objects){
+            for (Player2DDemo obj : objects){
+
+
+                // draw oval
                 int x = (int)obj.location().x;
                 int y = (int)obj.location().y;
 
                 int ox = x-markerSize/2;
                 int oy = y-markerSize/2;
 
-                int bx = (int) (obj.getBearingX()*markerSize/2);
-                int by = (int) (obj.getBearingY()*markerSize/2);
-
                 g.setColor(Color.CYAN);
                 g.fillOval(ox, oy, markerSize, markerSize);
 
                 // draw bearing
+                int bx = (int) (obj.getBearingX()*markerSize/2);
+                int by = (int) (obj.getBearingY()*markerSize/2);
+
                 g.setColor(Color.MAGENTA);
                 g.drawLine(x,y,x+bx,y+by);
 
                 //draw cone of vision
+
                 int fovHalf = (int) (obj.fieldOfVision/2);
                 int dist = (int) obj.sightDistance;
                 g.setColor(Color.RED);
@@ -265,32 +192,102 @@ public class GridApp extends JApplet
                 int bxLeft = (int) (obj.getBearingX(-fovHalf)*dist);
                 int byLeft = (int) (obj.getBearingY(-fovHalf)*dist);
                 g.drawLine(x,y,x+bxLeft,y+byLeft);
+
+
+                g.setColor(Color.BLACK);
+                g2.drawArc(ox,oy,markerSize,markerSize,(int)obj.getBearing()-fovHalf,fovHalf*2);
             }
 
-            /*
-            String tempString = feels + " " + temperature+"F";
-            FontRenderContext frc = g2.getFontRenderContext();
-            Rectangle2D boundsTemp = font.getStringBounds(tempString, frc);
-            Rectangle2D boundsCond = font.getStringBounds(condStr, frc);
-            int wText = Math.max((int)boundsTemp.getWidth(), (int)boundsCond.getWidth());
-            int hText = (int)boundsTemp.getHeight() + (int)boundsCond.getHeight();
-            int rX = (size.width-wText)/2;
-            int rY = (size.height-hText)/2;
-
-            g.setColor(Color.LIGHT_GRAY);
-            g2.fillRect(rX, rY, wText, hText);
-
-            g.setColor(textColor);
-            int xTextTemp = rX-(int)boundsTemp.getX();
-            int yTextTemp = rY-(int)boundsTemp.getY();
-            g.drawString(tempString, xTextTemp, yTextTemp);
-
-            int xTextCond = rX-(int)boundsCond.getX();
-            int yTextCond = rY-(int)boundsCond.getY() + (int)boundsTemp.getHeight();
-            g.drawString(condStr, xTextCond, yTextCond);
-            */
-
+            // draw helper text on top of everything else
+            for (Grid2D.Object2D obj : objects)
+                g2.drawString(obj.name() + " - " + String.format("%.2f",obj.getBearing()),
+                        (int)obj.location().x,
+                        (int)obj.location().y);
 
         }
+    }
+}
+
+class Player2DDemo extends Player2D implements Grid.DeltaOI<Grid2D.Location2D>{
+    int score;
+    boolean alive;
+    final int maxSpeed = 5;
+
+    Player2DDemo(String name, Grid2D grid) {
+        super(name, grid);
+        score = 0;
+        alive = true;
+    }
+
+    static int numAlive(Grid2D grid){
+        int count = 0;
+
+        Iterator<Player2DDemo> players = grid.gridObject2DList.iterator();
+        while (players.hasNext()) {
+            Player2DDemo player = players.next();
+            if (player.alive)
+                count++;
+        }
+
+        return count;
+    }
+
+    void tick(){
+        // find closest player
+        Player2DDemo closest = this;
+        Iterator<Player2DDemo> players = baseGrid.gridObject2DList.iterator();
+        while (players.hasNext()){
+            Player2DDemo other = players.next();
+            if (other.alive && distance(other) < distance(closest)) closest = other;
+        }
+
+
+        // move towards them up to within touch range
+        if (closest == this) return;
+        moveTo(closest);
+    }
+
+    static void assimilateTick(Grid2D grid){
+        Iterator<Player2DDemo> players = grid.gridObject2DList.iterator();
+        while (players.hasNext()) {
+            Player2DDemo player = players.next();
+            player.tick();
+        }
+    }
+
+    @Override
+    public boolean moveTo(Grid2D.Location2D target) {
+        moveTo(target,maxSpeed);
+        return true;
+    }
+
+    @Override
+    public boolean moveTo(Grid2D.Location2D target, double maxSpeed) {
+        return true;
+    }
+
+    public boolean moveTo(Player2DDemo player){
+        moveTo(player,maxSpeed);
+        return true;
+    }
+
+    public boolean moveTo(Player2DDemo target, double maxSpeed) {
+        if (this == target) return false;
+        setMyBearingTo(target);
+
+        double moveDist = 0;
+        // if within touch pathDistance, cover target
+        if (distance(target) < TOUCH_DISTANCE) {
+            setLocation(target);
+            return true;
+        }
+        // if within touch pathDistance after move, move to just inside touch pathDistance
+        else if (distance(target) < maxSpeed + TOUCH_DISTANCE)
+            moveDist = distance(target) - TOUCH_DISTANCE;
+        else moveDist = maxSpeed;
+
+        setLocation(getBearingX()*moveDist, getBearingY()*moveDist);
+
+        return true;
     }
 }

@@ -5,13 +5,13 @@ package com.rfsoftware.tonio337.grid;
  */
 public abstract class Grid {
     public interface Location<L extends Location>{
-        // single point distance
+        // single point pathDistance
         double distance(L other);
 
-        // path-finding distance
-        double distance(L[] others);
+        // path-finding pathDistance
+        double pathDistance(L[] others);
 
-        // single point distance for multi-direction
+        // single point pathDistance for multi-direction
         double[] direction(L other);
     }
 
@@ -27,9 +27,9 @@ public abstract class Grid {
 
         double distance(O other);
 
-        boolean isTouching(O other);
+        //boolean canTouch(O other);
 
-        boolean canSee(O other);
+        //boolean canSee(O other);
 
         void setLocation(O other);
     }
@@ -42,8 +42,6 @@ public abstract class Grid {
         boolean collidesWith(L[] self, L[] others);
     }
     public interface DeltaOI<L extends Location>{
-        double maxSpeed = 0;
-
         boolean moveTo(L target);
         boolean moveTo(L target, double maxSpeed);
     }

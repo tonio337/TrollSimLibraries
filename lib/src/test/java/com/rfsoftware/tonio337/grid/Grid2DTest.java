@@ -25,22 +25,9 @@ import com.rfsoftware.tonio337.grid.Grid2D.Object2D;
 public class Grid2DTest{
 
     private static final boolean DEBUG = false;
+
     private static Grid2D testGrid;
     private static ArrayList<Object2D> testGridObjectList;
-
-    public Grid2DTest(){
-        testGrid = new Grid2D();
-        testGridObjectList = testGrid.gridObject2DList;
-        new Player2D("Anne", 20.1, 20.1,testGrid);
-        new Player2D("Bob", 30, 38,testGrid);
-        new Player2D("Charlie", 24, 22,testGrid);
-        new Weapon2D("Ultima Weapon", 40, 20, 21, testGrid);
-
-        new Fire();
-        new Buff();
-        new Fail();
-    }
-
     private static abstract class Spell {
         String name;
         double effRange;
@@ -68,7 +55,7 @@ public class Grid2DTest{
             double dist = caster.distance(target);
             if (dist < effRange) return true;
 
-            // percentage success dependent on distance from max range
+            // percentage success dependent on pathDistance from max range
             // auto-fail if outside max range
             double sprdPer = spreadPercentage(caster,target);
             if (DEBUG)
@@ -90,6 +77,16 @@ public class Grid2DTest{
             return (dist - maxRange) / (effRange - maxRange);
         }
     }
+
+    static{
+        testGrid = new Grid2D();
+        testGridObjectList = testGrid.gridObject2DList;
+        new Player2D("Anne", 20.1, 20.1,testGrid);
+        new Player2D("Bob", 30, 38,testGrid);
+        new Player2D("Charlie", 24, 22,testGrid);
+        new Weapon2D("Ultima Weapon", 40, 20, 21, testGrid);
+    }
+
     private class Fire extends Spell {
         Fire() {
             super();
@@ -118,6 +115,20 @@ public class Grid2DTest{
         }
     }
 
+    public Grid2DTest(){
+        new Fire();
+        new Buff();
+        new Fail();
+    }
+
+    public static void main(String[] args){
+        Grid2DTest suite = new Grid2DTest();
+
+        //suite.castSpellsTest();
+        //suite.addObjectsTest();
+        //suite.locationToStringTest();
+    }
+
     @Test
     public void castSpellsTest(){
         for (Object2D caster : testGridObjectList)
@@ -139,28 +150,28 @@ public class Grid2DTest{
     }
 
     @Test
-    public void addObjects()
+    public void addObjectsTest()
     {
         // SCOPE: this testGrid is different from main one
-        Grid2D testGrid = new Grid2D();
+        Grid2D otherTestGrid = new Grid2D();
 
         // Created a test player in a different grid
         Player2D testPlayer = new Player2D("Coolio",42,42,new Grid2D());
-        assertFalse("Created in different grid, should not exist in this one.",testGrid.gridObject2DList
+        assertFalse("Created in different grid, should not exist in this one.",otherTestGrid.gridObject2DList
                 .contains(testPlayer));
 
-        testGrid.add(testPlayer);
-        assertTrue("Created in this grid, should exist.",testGrid.gridObject2DList
+        otherTestGrid.add(testPlayer);
+        assertTrue("Created in this grid, should exist.",otherTestGrid.gridObject2DList
                 .contains(testPlayer));
 
-        testGrid.add(testPlayer);
-        testGrid.remove(testPlayer);
-        assertFalse("Should be properly removed from grid now.", testGrid.gridObject2DList
+        otherTestGrid.add(testPlayer);
+        otherTestGrid.remove(testPlayer);
+        assertFalse("Should be properly removed from grid now.", otherTestGrid.gridObject2DList
                 .contains(testPlayer));
     }
 
     @Test
-    public void testLocationToString() {
+    public void locationToStringTest() {
         Grid2D testGrid = new Grid2D();
         Player2D testPlayer = new Player2D("Test",2.2423456,4.421455125,testGrid);
         String locationString = testPlayer.location().toString();
@@ -169,7 +180,7 @@ public class Grid2DTest{
     }
 
     @Test
-    public void testRegions() {
+    public void regionsTest() {
         Grid2D testGrid;
 
         testGrid = new Grid2D(0,100,0,100,5,5);
@@ -239,11 +250,11 @@ public class Grid2DTest{
     }
 
     @Test
-    public void testBearing() {
+    public void bearingTest() {
 
         Grid2D grid = new Grid2D();
-        Object2D p1 = new Player2D("P1",2,2,grid);
-        Object2D p2 = new Player2D("P2",4,4,grid);
+        Player2D p1 = new Player2D("P1",2,2,grid);
+        Player2D p2 = new Player2D("P2",4,4,grid);
 
         //assertThat(p1.getBearing(),is(0.0));
         //assertThat(p2.getBearing(),is(0.0));
@@ -284,6 +295,9 @@ public class Grid2DTest{
 
     public void draw(Grid2D grid){
         // TODO: Implement drawGrid
+        GridApp gridApp = new GridApp();
+        //gridApp.setGrid(testGrid);
     }
+
 }
 

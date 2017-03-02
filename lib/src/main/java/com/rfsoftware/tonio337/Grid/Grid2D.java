@@ -31,7 +31,7 @@ public class Grid2D extends Grid{
 
     // TODO: Implement or remove baseGrid
     private Grid2D baseGrid;
-    final ArrayList<Object2D> gridObject2DList;
+    ArrayList gridObject2DList;
 
     private Grid2D(double xMin, double xMax, double yMin, double yMax, double xStep, double yStep, double borderMargin) {
         this.xMin = xMin;
@@ -44,10 +44,10 @@ public class Grid2D extends Grid{
 
         gridObject2DList = new ArrayList<>();
     }
-
     Grid2D(double xMin, double xMax, double yMin, double yMax, double xStep, double yStep) {
         this(xMin,xMax,yMin,yMax,xStep,yStep,borderMarginDefault);
     }
+
     public Grid2D(){
         this(xMinDefault,xMaxDefault,yMinDefault,yMaxDefault,xStepDefault,yStepDefault);
     }
@@ -142,7 +142,7 @@ public class Grid2D extends Grid{
             this.y = y;
         }
 
-        // 2D distance formula *** sqrt((y2-y1)^2+(x2-x1)^2)
+        // 2D pathDistance formula *** sqrt((y2-y1)^2+(x2-x1)^2)
         @Override
         public double distance(Location2D other){
             return Math.sqrt(
@@ -151,7 +151,7 @@ public class Grid2D extends Grid{
         }
 
         @Override
-        public double distance(Location2D[] others) {
+        public double pathDistance(Location2D[] others) {
             double distance = 0;
             for (int gl = 0; gl < others.length-1; gl++){
                 distance += others[gl].distance(others[gl+1]);
@@ -184,20 +184,16 @@ public class Grid2D extends Grid{
     }
     abstract public static class Object2D implements Grid.Object<Object2D,Location2D> {
 
-        double bearing = 0;
-
-        double touchDistance = 2.5;
-        double sightDistance = 50;
-        // end-to-end horizontal field of vision in degrees
-        double fieldOfVision = 170;
-
         private String name = "(unnamed)";
         private Location2D loc;
+
+        public Grid2D baseGrid;
 
         // standard constructor
         Object2D(double x, double y, Grid2D grid){
             loc = new Location2D(x,y);
             grid.gridObject2DList.add(this);
+            baseGrid = grid;
         }
 
         public Object2D(String name, double x, double y, Grid2D grid){
@@ -205,32 +201,7 @@ public class Grid2D extends Grid{
             this.name = name;
         }
 
-        public Grid2D baseGrid;
-
         public String name(){ return name; }
-
-
-        // returns coord of bearing from center with distance of 1
-        static private double[] bearing(double bearing) {
-            bearing = Math.toRadians(bearing);
-            return new double[] {Math.cos(bearing),Math.sin(bearing)};
-        }
-
-        public double getBearingX(int offset){
-            return bearing(bearing + offset)[0];
-        }
-
-        public double getBearingY(int offset){
-            return bearing(bearing + offset)[1];
-        }
-
-        public double getBearingX(){
-            return getBearingX(0);
-        }
-
-        public double getBearingY(){
-            return getBearingY(0);
-        }
 
         @Override
         public Location2D location() {
@@ -241,49 +212,8 @@ public class Grid2D extends Grid{
         public double distance(Object2D other){ return location().distance(other.location()); }
 
         @Override
-        public double getBearing() { return bearing; }
-
-        @Override
-        public double getBearingTo(Object2D other) {
-            if (this == other) return 0.0;
-
-            double xDelta = other.location().x-location().x;
-            double yDelta = other.location().y-location().y;
-
-            double unitAngle = Math.toDegrees(Math.atan2(yDelta,xDelta));
-            double myBearingTo = 90 - unitAngle;
-
-            return myBearingTo % 360;
-        }
-
-        double getRelativeBearingTo(Object2D other) { return (getBearingTo(other)- getBearing())%180; }
-
-        void setMyBearingTo(double bearing) { this.bearing = bearing%360; }
-
-        void setMyBearingTo(Object2D other) {
-            if (this==other) return;
-            setMyBearingTo(getBearingTo(other));
-        }
-
-        @Override
-        public boolean isTouching(Object2D other){
-            return distance(other) < touchDistance;
-        }
-
-        @Override
-        public boolean canSee(Object2D other) {
-            return distance(other) < sightDistance &&
-                    getRelativeBearingTo(other) > -fieldOfVision/2 &&
-                    getRelativeBearingTo(other) < fieldOfVision/2;
-        }
-
-        @Override
         public void setLocation(Object2D other) {
             setLocation(other.location().x,other.location().y);
-        }
-
-        public void setFieldOfVision(double fov) {
-            fieldOfVision = Math.abs(fov);
         }
 
         @Override
