@@ -133,6 +133,7 @@ public class Grid2D extends Grid{
             //,DeltaOI<Location2D>
     {
 
+        //TODO: Make x and y private
         double x;
         double y;
 

@@ -4,6 +4,8 @@ import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
@@ -14,8 +16,12 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 import java.awt.Graphics2D.*;
+import java.util.concurrent.TimeUnit;
 
 import com.rfsoftware.tonio337.grid.Grid2D.Object2D;
+import com.rfsoftware.tonio337.grid.Player2D.Bearing;
+import com.rfsoftware.tonio337.grid.Player2D.Bearing.Direction;
+import com.rfsoftware.tonio337.grid.Player2D.Bearing.Orientation;
 
 /**
  * Project: TrollSimInterface
@@ -26,7 +32,7 @@ public class Grid2DTest{
 
     private static final boolean DEBUG = false;
 
-    private static Grid2D testGrid;
+    private static Grid2D testGrid = new Grid2D();
     private static ArrayList<Object2D> testGridObjectList;
     private static abstract class Spell {
         String name;
@@ -79,7 +85,7 @@ public class Grid2DTest{
     }
 
     static{
-        testGrid = new Grid2D();
+        //testGrid = new Grid2D();
         testGridObjectList = testGrid.gridObject2DList;
         new Player2D("Anne", 20.1, 20.1,testGrid);
         new Player2D("Bob", 30, 38,testGrid);
@@ -268,6 +274,7 @@ public class Grid2DTest{
 
         // Relative Bearing Test
 
+        p1.setMyBearingTo(p2);
         assertThat(p1.getRelativeBearingTo(p2),is(0.0));
         p1.setMyBearingTo(360+45);
         assertThat(p1.getRelativeBearingTo(p2),is(0.0));
@@ -284,19 +291,54 @@ public class Grid2DTest{
         double p1top2Ratio = (p2.location().y-p1.location().y)/(p2.location().x-p1.location().x);
         double p1top2RatioTest = p1.getBearingY()/p1.getBearingX();
 
-        assertThat(p1top2Ratio,is(p1top2RatioTest));
+        assertEquals(p1top2Ratio,p1top2RatioTest,.1);
 
     }
 
     @Test
-    public void drawGrid() {
-        draw(testGrid);
+    public void drawGrid(){
+        drawGrid(testGrid);
     }
 
-    public void draw(Grid2D grid){
-        // TODO: Implement drawGrid
-        GridApp gridApp = new GridApp();
-        //gridApp.setGrid(testGrid);
+    public void drawGrid(Grid2D grid) {
+        // These two grids should effectively be the same.
+        try {
+
+
+            GridApp.main(new String[]{});
+            GridApp gridApp = GridApp.getCurrentApp();
+            //gridApp.setGrid(testGrid);
+
+            GridApp.main(new String[]{});
+            GridApp gridApp2 = GridApp.getCurrentApp();
+
+            //TODO: Figure out how to view instantiated JPanel objects.
+            TimeUnit.SECONDS.sleep(10);
+        }
+
+        catch(InterruptedException e) {
+            return;
+        }
+    }
+
+    @Test
+    public void bearingClassTest(){
+
+        Bearing unitCircleZero = new Bearing(0.0, Direction.RIGHT, Orientation.COUNTERCLOCKWISE);
+        assertThat(unitCircleZero.getDegrees(),is(0.0));
+
+        Bearing unitCirclePi = new Bearing(180.0, Direction.RIGHT, Orientation.COUNTERCLOCKWISE);
+        assertThat(unitCirclePi.getDegrees(),is(180.0));
+
+        Bearing unitCircleOnePtFivePi = new Bearing(-90-360, Direction.RIGHT, Orientation.COUNTERCLOCKWISE);
+        assertThat(unitCircleOnePtFivePi.getDegrees(),is(270.0));
+        unitCircleOnePtFivePi.setBearing(270+360);
+        assertThat(unitCircleOnePtFivePi.getDegrees(),is(270.0));
+
+        double gridNorthDegrees = unitCircleZero.translate(Direction.UP, Orientation.CLOCKWISE);
+        assertThat(gridNorthDegrees,is(90.0));
+        double gridSouthDegrees = unitCircleZero.translate(Direction.DOWN, Orientation.CLOCKWISE);
+        assertThat(gridSouthDegrees,is(270.0));
     }
 
 }

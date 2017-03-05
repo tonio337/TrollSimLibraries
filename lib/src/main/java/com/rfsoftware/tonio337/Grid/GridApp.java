@@ -31,16 +31,24 @@ import javax.swing.event.ChangeListener;
 public class GridApp extends JApplet
     implements ChangeListener
 {
+    private static GridApp currentApp;
+
+    public GridApp(){ super(); }
+    public GridApp(Grid2D grid){
+        this();
+        setGrid(grid);
+    }
 
     GridView gridView;
 
-    int numObjects = 10;
+    int numObjects = 2;
     int changeCounter = 0;
     final int changeDelay = 5;
 
     public void init() {
         /* Turn off metal's use of bold fonts */
         UIManager.put("swing.boldMetal", Boolean.FALSE);
+        currentApp = this;
     }
 
     public void start() {
@@ -65,19 +73,21 @@ public class GridApp extends JApplet
 
         JPanel p = new JPanel();
         p.add("North",new JLabel("GridView"));
-        JSlider markerSlider = new JSlider(20, 100, 65);
-        markerSlider.setMinorTickSpacing(5);
-        markerSlider.setMajorTickSpacing(20);
+        JSlider markerSlider = new JSlider(60, 300, 100);
+        markerSlider.setMinorTickSpacing(20);
+        markerSlider.setMajorTickSpacing(60);
         markerSlider.setPaintTicks(true);
         markerSlider.setPaintLabels(true);
         markerSlider.addChangeListener(this);
-        p.add(markerSlider);
+        p.add("North",markerSlider);
         add("Center", p);
 
         gridView = new GridView();
         gridView.setupGrid(numObjects);
 
-        p.add("South", new JScrollPane().add(gridView));
+        p.add("Center", new JScrollPane(gridView,
+                JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS));
 
     }
 
@@ -90,9 +100,16 @@ public class GridApp extends JApplet
         gridView.setMarkerSize(slider.getValue()/2);
     }
 
-    public void setGrid(Grid2D grid){
-        if (grid != null) gridView.grid = grid;
-        gridView.setupGrid(numObjects);
+    public GridApp setGrid(Grid2D grid) {
+        if (grid != null){
+            gridView.grid = grid;
+            gridView.setupGrid(numObjects);
+        }
+        return this;
+    }
+
+    static public GridApp getCurrentApp(){
+        return currentApp;
     }
 
     static class GridView extends Component {
@@ -107,19 +124,26 @@ public class GridApp extends JApplet
 
             String[] names = {"Anna", "Berry", "Charlie", "Dave", "Edna",
                                 "Florence", "Ginger", "Holly", "Icarus", "Juniper"};
-            grid = new Grid2D(0,300,0,300,30,30);
-            objects = new Player2DDemo[numObjects];
-            //TODO: setup random number of objects
 
-            for (int o = 0; o < objects.length; o++) {
-                objects[o] = new Player2DDemo(names[o] + " " + o/names.length+1,grid);
-                objects[o].setMyBearingTo(objects[0]);
-                objects[o].setFieldOfVision(70);
+            // if grid does not exist, create a new one
+            if (grid == null)
+                grid = new Grid2D(0,300,0,300,30,30);
+
+            // if grid object list does not exist, create a new one with random objects
+            if (grid.gridObject2DList.size() == 0) {
+                objects = new Player2DDemo[numObjects];
+                //TODO: setup random number of objects
+
+                for (int o = 0; o < objects.length; o++) {
+                    objects[o] = new Player2DDemo(names[o] + " " + o / names.length + 1, grid);
+                    objects[o].setMyBearingTo(objects[0]);
+                    objects[o].setFieldOfVision(70);
+                }
             }
             setMarkerSize(50);
         }
 
-        void setMarkerSize(int mSize) { markerSize = mSize; scale = (double)mSize/50; repaint(); }
+        void setMarkerSize(int mSize) { markerSize = mSize/2; scale = (double)mSize/50; repaint(); }
 
         public Dimension getPreferredSize(){
             return (grid == null ? new Dimension(450, 125) :
@@ -138,11 +162,7 @@ public class GridApp extends JApplet
             Graphics2D g2 = (Graphics2D) g;
             Dimension size = getSize();
 
-            //setupWeatherReport();
-
-            // Freezing, Cold, Cool, Warm, Hot,
-            // Blue, Green, Yellow, Orange, Red
-            Font font = new Font("Serif", Font.PLAIN, 10);
+            Font font = new Font("Serif", Font.PLAIN, 12);
             g.setFont(font);
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                     RenderingHints.VALUE_ANTIALIAS_ON);
@@ -159,51 +179,64 @@ public class GridApp extends JApplet
 
             // draw objects
 
-            for (Player2DDemo obj : objects){
-
+            Iterator<Player2DDemo> players = grid.gridObject2DList.iterator();
+            while (players.hasNext()) {
+                Player2DDemo player = players.next();
 
                 // draw oval
-                int x = (int)obj.location().x;
-                int y = (int)obj.location().y;
+                int centerX = (int)player.location().x;
+                int centerY = (int)player.location().y;
 
-                int ox = x-markerSize/2;
-                int oy = y-markerSize/2;
+                // oval coords start at top left of shape
+                int ovalX = centerX-markerSize/2;
+                int ovalY = centerY-markerSize/2;
 
                 g.setColor(Color.CYAN);
-                g.fillOval(ox, oy, markerSize, markerSize);
+                g.fillOval(ovalX, ovalY, markerSize, markerSize);
+
+                // TODO: translate bearing before drawing bearing related objects
+                // Will likely need a static getBearingX/Y function
+
+                double mapBearing = Player2D.Bearing.translate(
+                        new Player2D.Bearing(player.getBearing(), Player2D.Bearing.Direction.UP, Player2D.Bearing.Orientation.CLOCKWISE),
+                        Player2D.Bearing.Direction.DOWN, Player2D.Bearing.Orientation.CLOCKWISE);
 
                 // draw bearing
-                int bx = (int) (obj.getBearingX()*markerSize/2);
-                int by = (int) (obj.getBearingY()*markerSize/2);
+                int bx = (int) (Player2D.bearingX(mapBearing)*markerSize/2);
+                int by = (int) (Player2D.bearingY(mapBearing)*markerSize/2);
 
                 g.setColor(Color.MAGENTA);
-                g.drawLine(x,y,x+bx,y+by);
+                g.drawLine(centerX,centerY,centerX+bx,centerY+by);
 
                 //draw cone of vision
 
-                int fovHalf = (int) (obj.fieldOfVision/2);
-                int dist = (int) obj.sightDistance;
+                int fovHalf = (int) (player.fieldOfVision/2);
+                int dist = (int) player.sightDistance;
                 g.setColor(Color.RED);
 
-                int bxRight = (int) (obj.getBearingX(fovHalf)*dist);
-                int byRight = (int) (obj.getBearingY(fovHalf)*dist);
-                g.drawLine(x,y,x+bxRight,y+byRight);
+                int bxRight = (int) (Player2D.bearingX(mapBearing,fovHalf)*dist);
+                int byRight = (int) (Player2D.bearingY(mapBearing,fovHalf)*dist);
+                g.drawLine(centerX,centerY,centerX+bxRight,centerY+byRight);
 
-                int bxLeft = (int) (obj.getBearingX(-fovHalf)*dist);
-                int byLeft = (int) (obj.getBearingY(-fovHalf)*dist);
-                g.drawLine(x,y,x+bxLeft,y+byLeft);
-
+                int bxLeft = (int) (Player2D.bearingX(mapBearing,-fovHalf)*dist);
+                int byLeft = (int) (Player2D.bearingY(mapBearing,-fovHalf)*dist);
+                g.drawLine(centerX,centerY,centerX+bxLeft,centerY+byLeft);
 
                 g.setColor(Color.BLACK);
-                g2.drawArc(ox,oy,markerSize,markerSize,(int)obj.getBearing()-fovHalf,fovHalf*2);
+                double arcDegrees = Player2D.Bearing.translate(
+                        new Player2D.Bearing(player.getBearing(), Player2D.Bearing.Direction.UP, Player2D.Bearing.Orientation.CLOCKWISE),
+                        Player2D.Bearing.Direction.RIGHT, Player2D.Bearing.Orientation.COUNTERCLOCKWISE);
+                g2.drawArc(ovalX,ovalY,markerSize,markerSize,(int)arcDegrees-fovHalf,fovHalf*2);
             }
 
             // draw helper text on top of everything else
-            for (Grid2D.Object2D obj : objects)
-                g2.drawString(obj.name() + " - " + String.format("%.2f",obj.getBearing()),
-                        (int)obj.location().x,
-                        (int)obj.location().y);
-
+            players = grid.gridObject2DList.iterator();
+            while (players.hasNext()) {
+                Player2DDemo player = players.next();
+                g2.drawString(player.name() + " - " + String.format("%.2f", player.getBearing()),
+                        (int) player.location().x,
+                        (int) player.location().y);
+            }
         }
     }
 }
