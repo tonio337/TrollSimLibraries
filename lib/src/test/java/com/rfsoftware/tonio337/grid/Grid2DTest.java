@@ -339,6 +339,9 @@ public class Grid2DTest{
         assertThat(gridNorthDegrees,is(90.0));
         double gridSouthDegrees = unitCircleZero.translate(Direction.DOWN, Orientation.CLOCKWISE);
         assertThat(gridSouthDegrees,is(270.0));
+
+        assertEquals(Bearing.translate(new Bearing(180,Direction.UP,Orientation.CLOCKWISE),Direction.RIGHT,Orientation.COUNTERCLOCKWISE),
+                270,.1);
     }
 
 }

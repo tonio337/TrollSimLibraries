@@ -202,10 +202,10 @@ public class Player2D extends Object2D {
             //(target.dir-source.dir) * 90 deg
             double directionMod = modulo((source.direction.getValue() - direction.getValue()),4) * 90;
 
-            target += directionMod;
+            target -= directionMod * source.orientation.getValue() * -1;
 
             if (source.orientation.getValue() * orientation.getValue() == -1)
-                target = 180-target;
+                target = 360-target;
 
             target = recenterBearing(target);
 

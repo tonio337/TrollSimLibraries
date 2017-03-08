@@ -41,9 +41,11 @@ public class GridApp extends JApplet
 
     GridView gridView;
 
-    int numObjects = 2;
+    int numObjects = 5;
     int changeCounter = 0;
     final int changeDelay = 5;
+
+    static boolean endGame = false;
 
     public void init() {
         /* Turn off metal's use of bold fonts */
@@ -73,9 +75,9 @@ public class GridApp extends JApplet
 
         JPanel p = new JPanel();
         p.add("North",new JLabel("GridView"));
-        JSlider markerSlider = new JSlider(60, 300, 100);
-        markerSlider.setMinorTickSpacing(20);
-        markerSlider.setMajorTickSpacing(60);
+        JSlider markerSlider = new JSlider(50, 500, 100);
+        markerSlider.setMinorTickSpacing(25);
+        markerSlider.setMajorTickSpacing(75);
         markerSlider.setPaintTicks(true);
         markerSlider.setPaintLabels(true);
         markerSlider.addChangeListener(this);
@@ -132,7 +134,6 @@ public class GridApp extends JApplet
             // if grid object list does not exist, create a new one with random objects
             if (grid.gridObject2DList.size() == 0) {
                 objects = new Player2DDemo[numObjects];
-                //TODO: setup random number of objects
 
                 for (int o = 0; o < objects.length; o++) {
                     objects[o] = new Player2DDemo(names[o] + " " + o / names.length + 1, grid);
@@ -147,14 +148,24 @@ public class GridApp extends JApplet
 
         public Dimension getPreferredSize(){
             return (grid == null ? new Dimension(450, 125) :
-                    new Dimension((int)(grid.getxMax()-grid.getxMin()+10),
-                            (int)(grid.getyMax()-grid.getyMin())+10));
+                    new Dimension( (int)((grid.getxMax()-grid.getxMin())*scale+10),
+                            (int)((grid.getyMax()-grid.getyMin())*scale+10) ));
         }
 
         public void tick() {
             Player2DDemo.assimilateTick(grid);
-            if (Player2DDemo.numAlive(grid) <= 1) {
+            if (Player2DDemo.numAlive(grid) <= 1 && !endGame) {
                 // TODO: End the game
+                Player2DDemo winner = null;
+
+                Iterator<Player2DDemo> players = grid.gridObject2DList.iterator();
+                while (players.hasNext()) {
+                    Player2DDemo player = players.next();
+                    if (player.alive) winner = player;
+                }
+
+                getParent().add(new JLabel(String.format("%s is the winner!",winner.name())));
+                endGame = true;
             }
         }
 
@@ -183,9 +194,13 @@ public class GridApp extends JApplet
             while (players.hasNext()) {
                 Player2DDemo player = players.next();
 
+                if (!player.alive) continue;
+
+                Grid2D.Location2D j2d = player.j2d();
+
                 // draw oval
-                int centerX = (int)player.location().x;
-                int centerY = (int)player.location().y;
+                int centerX = (int)j2d.x;
+                int centerY = (int)j2d.y;
 
                 // oval coords start at top left of shape
                 int ovalX = centerX-markerSize/2;
@@ -197,16 +212,16 @@ public class GridApp extends JApplet
                 // TODO: translate bearing before drawing bearing related objects
                 // Will likely need a static getBearingX/Y function
 
-                double mapBearing = Player2D.Bearing.translate(
-                        new Player2D.Bearing(player.getBearing(), Player2D.Bearing.Direction.UP, Player2D.Bearing.Orientation.CLOCKWISE),
-                        Player2D.Bearing.Direction.DOWN, Player2D.Bearing.Orientation.CLOCKWISE);
+                double mapBearing = player.getBearing();
 
                 // draw bearing
                 int bx = (int) (Player2D.bearingX(mapBearing)*markerSize/2);
                 int by = (int) (Player2D.bearingY(mapBearing)*markerSize/2);
+                //int bx = (int) (player.getBearingX()*markerSize/2);
+                //int by = (int) (player.getBearingY()*markerSize/2);
 
                 g.setColor(Color.MAGENTA);
-                g.drawLine(centerX,centerY,centerX+bx,centerY+by);
+                g.drawLine(centerX,centerY,centerX+bx,centerY-by);
 
                 //draw cone of vision
 
@@ -216,26 +231,34 @@ public class GridApp extends JApplet
 
                 int bxRight = (int) (Player2D.bearingX(mapBearing,fovHalf)*dist);
                 int byRight = (int) (Player2D.bearingY(mapBearing,fovHalf)*dist);
-                g.drawLine(centerX,centerY,centerX+bxRight,centerY+byRight);
+                //int bxRight = (int) ((player.getBearingX(fovHalf))*dist);
+                //int byRight = (int) ((player.getBearingY(fovHalf))*dist);
+                g.drawLine(centerX,centerY,centerX+bxRight,centerY-byRight);
 
                 int bxLeft = (int) (Player2D.bearingX(mapBearing,-fovHalf)*dist);
                 int byLeft = (int) (Player2D.bearingY(mapBearing,-fovHalf)*dist);
-                g.drawLine(centerX,centerY,centerX+bxLeft,centerY+byLeft);
+                //int bxLeft = (int) ((player.getBearingX(-fovHalf))*dist);
+                //int byLeft = (int) ((player.getBearingY(-fovHalf))*dist);
+                g.drawLine(centerX,centerY,centerX+bxLeft,centerY-byLeft);
 
                 g.setColor(Color.BLACK);
                 double arcDegrees = Player2D.Bearing.translate(
                         new Player2D.Bearing(player.getBearing(), Player2D.Bearing.Direction.UP, Player2D.Bearing.Orientation.CLOCKWISE),
                         Player2D.Bearing.Direction.RIGHT, Player2D.Bearing.Orientation.COUNTERCLOCKWISE);
-                g2.drawArc(ovalX,ovalY,markerSize,markerSize,(int)arcDegrees-fovHalf,fovHalf*2);
+                g.drawArc(ovalX,ovalY,markerSize,markerSize,(int)arcDegrees-fovHalf,fovHalf*2);
             }
 
             // draw helper text on top of everything else
             players = grid.gridObject2DList.iterator();
             while (players.hasNext()) {
                 Player2DDemo player = players.next();
-                g2.drawString(player.name() + " - " + String.format("%.2f", player.getBearing()),
-                        (int) player.location().x,
-                        (int) player.location().y);
+                Grid2D.Location2D j2d = player.j2d();
+                int x = (int)j2d.x;
+                int y = (int)j2d.y;
+
+                g2.drawString(player.name() + " - " + String.format("%.2f, (%d, %d)", player.getBearing(),(int) player.location().x,(int) player.location().y),
+                        x,
+                        y);
             }
         }
     }
@@ -267,24 +290,39 @@ class Player2DDemo extends Player2D implements Grid.DeltaOI<Grid2D.Location2D>{
 
     void tick(){
         // find closest player
-        Player2DDemo closest = this;
+        Player2DDemo closest = null;
+        double distance = baseGrid.getxSize()*baseGrid.getySize();
+
         Iterator<Player2DDemo> players = baseGrid.gridObject2DList.iterator();
         while (players.hasNext()){
             Player2DDemo other = players.next();
-            if (other.alive && distance(other) < distance(closest)) closest = other;
+            if (other!=this && other.alive && distance(other) < distance) {
+                distance = distance(other);
+                closest = other;
+            }
         }
 
-
         // move towards them up to within touch range
-        if (closest == this) return;
+        if (closest == null || closest == this) return;
         moveTo(closest);
+
+        // kill players within touch range
+        players = baseGrid.gridObject2DList.iterator();
+        while (players.hasNext()){
+            Player2DDemo other = players.next();
+            if (other!=this && other.alive && canSee(other) && canTouch(other)) {
+                other.alive = false;
+            }
+        }
+
     }
 
     static void assimilateTick(Grid2D grid){
         Iterator<Player2DDemo> players = grid.gridObject2DList.iterator();
         while (players.hasNext()) {
             Player2DDemo player = players.next();
-            player.tick();
+            if (player.alive)
+                player.tick();
         }
     }
 
@@ -309,18 +347,24 @@ class Player2DDemo extends Player2D implements Grid.DeltaOI<Grid2D.Location2D>{
         setMyBearingTo(target);
 
         double moveDist = 0;
+        /*
         // if within touch pathDistance, cover target
-        if (distance(target) < TOUCH_DISTANCE) {
+        if (canTouch(target)) {
             setLocation(target);
             return true;
         }
+        */
         // if within touch pathDistance after move, move to just inside touch pathDistance
-        else if (distance(target) < maxSpeed + TOUCH_DISTANCE)
+        if (distance(target) < maxSpeed + TOUCH_DISTANCE)
             moveDist = distance(target) - TOUCH_DISTANCE;
         else moveDist = maxSpeed;
 
-        setLocation(getBearingX()*moveDist, getBearingY()*moveDist);
+        setLocation(location().x + getBearingX()*moveDist, location().y + getBearingY()*moveDist);
 
         return true;
+    }
+
+    Grid2D.Location2D j2d(){
+        return new Grid2D.Location2D(location().x, baseGrid.getyMax() + baseGrid.getyMin() - location().y);
     }
 }
