@@ -8,12 +8,15 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.util.Iterator;
 
 import javax.swing.JApplet;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -29,7 +32,6 @@ import javax.swing.event.ChangeListener;
  * Created by adlee on 2/21/2017.
  */
 public class GridApp extends JApplet
-    implements ChangeListener
 {
     private static GridApp currentApp;
 
@@ -40,10 +42,6 @@ public class GridApp extends JApplet
     }
 
     GridView gridView;
-
-    int numObjects = 5;
-    int changeCounter = 0;
-    final int changeDelay = 5;
 
     static boolean endGame = false;
 
@@ -74,38 +72,48 @@ public class GridApp extends JApplet
         setLayout(new BorderLayout());
 
         JPanel p = new JPanel();
-        p.add("North",new JLabel("GridView"));
+        p.setLayout(new BorderLayout());
+
+        p.add("West",new JLabel("GridView"));
+
         JSlider markerSlider = new JSlider(50, 500, 100);
         markerSlider.setMinorTickSpacing(25);
         markerSlider.setMajorTickSpacing(75);
         markerSlider.setPaintTicks(true);
         markerSlider.setPaintLabels(true);
-        markerSlider.addChangeListener(this);
+        markerSlider.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent changeEvent) {
+                JSlider slider = (JSlider) changeEvent.getSource();
+                gridView.setMarkerSize(slider.getValue() / 2);
+            }
+        });
         p.add("North",markerSlider);
-        add("Center", p);
+
+        JButton stepButton = new JButton("Step");
+        stepButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                gridView.tick();
+            }
+        });
+        p.add("South",stepButton);
 
         gridView = new GridView();
-        gridView.setupGrid(numObjects);
+        gridView.setupGrid();
 
         p.add("Center", new JScrollPane(gridView,
                 JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
                 JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS));
 
-    }
+        add("Center", p);
 
-    public void stateChanged(ChangeEvent e) {
-        JSlider slider = (JSlider)e.getSource();
-        if (changeCounter++ > changeDelay){
-            gridView.tick();
-            changeCounter = 0;
-        }
-        gridView.setMarkerSize(slider.getValue()/2);
     }
 
     public GridApp setGrid(Grid2D grid) {
         if (grid != null){
             gridView.grid = grid;
-            gridView.setupGrid(numObjects);
+            gridView.setupGrid();
         }
         return this;
     }
@@ -118,11 +126,15 @@ public class GridApp extends JApplet
 
         Grid2D grid;
         Player2DDemo[] objects;
+        int numObjects = 5;
 
         int markerSize = 5;
         double scale = 1;
 
-        public void setupGrid(int numObjects){
+        int changeCounter = 0;
+        final int changeDelay = 0;
+
+        public void setupGrid(){
 
             String[] names = {"Anna", "Berry", "Charlie", "Dave", "Edna",
                                 "Florence", "Ginger", "Holly", "Icarus", "Juniper"};
@@ -153,20 +165,37 @@ public class GridApp extends JApplet
         }
 
         public void tick() {
-            Player2DDemo.assimilateTick(grid);
-            if (Player2DDemo.numAlive(grid) <= 1 && !endGame) {
-                // TODO: End the game
-                Player2DDemo winner = null;
+            if (++changeCounter >= changeDelay) {
+                changeCounter = 0;
 
-                Iterator<Player2DDemo> players = grid.gridObject2DList.iterator();
-                while (players.hasNext()) {
-                    Player2DDemo player = players.next();
-                    if (player.alive) winner = player;
+                Player2DDemo.assimilateTick(grid);
+                if (Player2DDemo.numAlive(grid) <= 1 && !endGame) {
+                    // TODO: End the game
+                    Player2DDemo winner = null;
+
+                    Iterator<Player2DDemo> players = grid.gridObject2DList.iterator();
+                    while (players.hasNext()) {
+                        Player2DDemo player = players.next();
+                        if (player.alive) winner = player;
+                    }
+
+                    getParent().add("South",new JLabel(String.format("%s is the winner!",winner.name())));
+                    endGame = true;
                 }
-
-                getParent().add(new JLabel(String.format("%s is the winner!",winner.name())));
-                endGame = true;
             }
+            repaint();
+        }
+
+        public void addPlayer(Player2DDemo p){
+            grid.add(p);
+        }
+
+        public void removePlayer(Player2DDemo p){
+            grid.remove(p);
+        }
+
+        public void killPlayer(Player2DDemo p){
+            p.alive = false;
         }
 
         public void paint(Graphics g) {
@@ -261,6 +290,14 @@ public class GridApp extends JApplet
                         y);
             }
         }
+    }
+
+    public void addPlayer(Player2DDemo p){
+        gridView.addPlayer(p);
+    }
+
+    public void removePlayer(Player2DDemo p){
+        gridView.removePlayer(p);
     }
 }
 
